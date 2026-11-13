@@ -8,7 +8,7 @@ Lightweight ADRs: context → decision → consequences / alternatives considere
 sort and offset paging. `datastore_search` supports all three natively and answers a
 20-row page in well under a second.
 
-**Decision.** `GOV_IS.Contractors_Search` calls data.gov.sg on every request. There are no
+**Decision.** `DataGovSG_IS.Contractors_Search` calls data.gov.sg on every request. There are no
 entities and no sync timer.
 
 **Consequences.** Data is always current and nothing needs reconciling. Availability and
@@ -33,7 +33,7 @@ data.gov.sg's.
 
 **Consequences.** Consumers never need exception handling for upstream problems and can't
 leak technical detail. The details are still logged on the server (`LogError = True`).
-A service action keeps the module loosely coupled: consumers don't recompile when GOV_IS
+A service action keeps the module loosely coupled: consumers don't recompile when DataGovSG_IS
 changes internally.
 
 ## ADR-3 Validate, allow-list and sanitise at the boundary
@@ -41,7 +41,7 @@ changes internally.
 **Context.** Upstream rejects punctuation in `q` (HTTP 409 "q is invalid"), accepts any
 `sort` expression, and caps nothing on our side.
 
-**Decision.** GOV_IS owns all input rules:
+**Decision.** DataGovSG_IS owns all input rules:
 * `Limit` must be 1–5000 and `Offset` must be ≥ 0, both typed Integer.
 * `SortBy` must be one of five fields, optionally followed by ` desc`; anything else is
   ignored.
@@ -73,7 +73,7 @@ boundary and in the UI wiring. So:
 * **Playwright** proves the user journeys against a deployed environment.
 * **IaC** is tested offline with `terraform test` and a mocked provider.
 
-A `GOV_Tests` self-test module, in its own LifeTime application that is never deployed to
+A `RegisteredContractors_Tests` self-test module, in its own LifeTime application that is never deployed to
 Production, is the next step for unit-level checks of the sanitiser and allow-list.
 
 ## ADR-6 One environment per Terraform state; servers are cattle-ish

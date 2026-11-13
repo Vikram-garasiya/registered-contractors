@@ -2,14 +2,14 @@
 
 APP_BASE_URL is the root of the OutSystems environment, e.g.
   https://<env>.outsystemscloud.com
-The UI module (GOV_UI) is served at {APP_BASE_URL}/GOV_UI. Tests that need the
+The UI module (RegisteredContractors) is served at {APP_BASE_URL}/RegisteredContractors. Tests that need the
 deployed app are skipped when APP_BASE_URL is not set, so the suite runs anywhere.
 """
 import os
 
 import pytest
 
-UI_MODULE = "GOV_UI"
+UI_MODULE = "RegisteredContractors"
 
 
 @pytest.fixture(scope="session")

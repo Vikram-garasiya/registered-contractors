@@ -1,7 +1,7 @@
 """End-to-end tests of the Contractors screen (Playwright).
 Run with: pytest tests/e2e -m e2e --browser chromium   (APP_BASE_URL required)
 
-The screen reads data.gov.sg live through GOV_IS, so assertions are about behaviour
+The screen reads data.gov.sg live through DataGovSG_IS, so assertions are about behaviour
 (counts shrink, order flips, pages advance, files download), not exact values."""
 import re
 
@@ -33,7 +33,7 @@ def search(page: Page, text: str) -> None:
 @pytest.fixture
 def screen(page: Page, ui_url):
     page.goto(f"{ui_url}/Contractors")
-    expect(page.get_by_text("Registered contractors").first).to_be_visible(timeout=LOAD)
+    expect(page.get_by_text("Registered contractors", exact=True)).to_be_visible(timeout=LOAD)
     return page
 
 
@@ -52,7 +52,7 @@ def test_search_narrows_results(screen: Page):
 
 
 def test_search_with_punctuation_does_not_error(screen: Page):
-    # data.gov.sg rejects punctuation in q (HTTP 409); GOV_IS strips it.
+    # data.gov.sg rejects punctuation in q (HTTP 409); DataGovSG_IS strips it.
     search(screen, "PTE. LTD.")
     assert total(screen) > 0
     expect(screen.get_by_text(re.compile("rejected|unavailable|unexpected", re.I))).to_have_count(0)

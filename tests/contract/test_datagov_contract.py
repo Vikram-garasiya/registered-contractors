@@ -1,8 +1,8 @@
 """Upstream contract tests for the BCA Registered Contractors dataset on data.gov.sg.
 
 The app reads data.gov.sg live (no local copy), so a change upstream breaks it
-immediately. These tests pin every assumption GOV_IS.Contractors_Search and the
-GOV_UI screen make, and run nightly without a deployed app (marker: contract).
+immediately. These tests pin every assumption DataGovSG_IS.Contractors_Search and the
+RegisteredContractors screen make, and run nightly without a deployed app (marker: contract).
 """
 import os
 import re

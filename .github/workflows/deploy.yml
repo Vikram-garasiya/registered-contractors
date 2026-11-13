@@ -1,6 +1,6 @@
 name: deploy
 
-# Promotes the OutSystems application (GOV_IS + GOV_UI) through the pipeline with
+# Promotes the OutSystems application (DataGovSG_IS + RegisteredContractors) through the pipeline with
 # the LifeTime Deployment API v2, gating every hop on the automated tests:
 #   Development --(tag version)--> Test --(tests green + approval)--> Production
 on:

@@ -9,7 +9,7 @@ pipelines** and the documentation.
 
 | Deliverable | Where |
 |---|---|
-| OutSystems application: modules `GOV_IS` (integration) and `GOV_UI` (screens) | OutSystems environment (access provided separately) |
+| OutSystems application: modules `DataGovSG_IS` (integration) and `RegisteredContractors` (screens) | OutSystems environment (access provided separately) |
 | AWS IaC for the OutSystems Platform | [`infra/terraform`](infra/terraform) |
 | Automated tests | [`tests`](tests), [`infra/terraform/tests`](infra/terraform/tests) |
 | CI/CD | [`.github/workflows`](.github/workflows), [`scripts/lifetime_deploy.py`](scripts/lifetime_deploy.py) |
@@ -43,8 +43,8 @@ flowchart LR
   end
   subgraph "OutSystems (Architecture Canvas)"
     direction TB
-    UI["GOV_UI · End-user<br/>Contractors screen<br/>GetContractors / GetContractorsForExport"]
-    IS["GOV_IS · Foundation<br/>Contractors_Search (service action)<br/>REST DataGovSG_Datastore (private)"]
+    UI["RegisteredContractors · End-user<br/>Contractors screen<br/>GetContractors / GetContractorsForExport"]
+    IS["DataGovSG_IS · Foundation<br/>Contractors_Search (service action)<br/>REST DataGovSG_Datastore (private)"]
     UI -->|ResourceId? Limit Offset Query SortBy| IS
   end
   IS <-- HTTPS JSON · x-api-key optional --> DS
@@ -54,8 +54,8 @@ flowchart LR
 
 | Layer | Module | Owns | Public surface |
 |---|---|---|---|
-| End-user | `GOV_UI` (Reactive) | Contractors screen, search/sort/paging state, Excel export, theme | none |
-| Foundation | `GOV_IS` (Service) | REST consumer `DataGovSG_Datastore` (private), input validation, sort allow-list, query sanitiser, HTTP→error mapping, config | `Contractors_Search`, the `ContractorRecord` / `DatastoreResult` structures |
+| End-user | `RegisteredContractors` (Reactive) | Contractors screen, search/sort/paging state, Excel export, theme | none |
+| Foundation | `DataGovSG_IS` (Service) | REST consumer `DataGovSG_Datastore` (private), input validation, sort allow-list, query sanitiser, HTTP→error mapping, config | `Contractors_Search`, the `ContractorRecord` / `DatastoreResult` structures |
 
 ### 2.1 Key decision: read live and don't copy the data
 
@@ -75,7 +75,7 @@ search, sort, offset paging) is supported natively and quickly by data.gov.sg's
   If traffic grew or analytics (aggregations, history) were needed, the next step would be
   a cached snapshot in a Core module. ADR-1 covers when to switch.
 
-### 2.2 `GOV_IS.Contractors_Search`: the integration contract
+### 2.2 `DataGovSG_IS.Contractors_Search`: the integration contract
 
 | Input | Type | Notes |
 |---|---|---|
@@ -105,6 +105,7 @@ correctness and security. Everything below is applied and published.
 
 | Before | After | Why |
 |---|---|---|
+| Modules `GOV_IS`, `GOV_UI` | `DataGovSG_IS`, `RegisteredContractors` | `<System>_IS` names the external system an integration service wraps; the end-user module is named after the product and gives the URL `/RegisteredContractors` |
 | Service action `Get_GovData`, inputs `dataset_Id`, `limit`, `offset`, `Search` | `Contractors_Search`: `ResourceId`, `Limit`, `Offset`, `Query`, plus new `SortBy` | Entity_Verb naming; PascalCase; a name that says what it returns |
 | `limit` / `offset` typed Text, validated with `TextToIntegerValidate` | Integer with defaults and range checks | The type system now does the validation; there are no string-to-number edge cases |
 | REST client `Data`, method `GetDatastoreSearch` | `DataGovSG_Datastore.DatastoreSearch` | A meaningful integration name |
@@ -112,7 +113,7 @@ correctness and security. Everything below is applied and published.
 | Attributes `Company_name`, `Uen_no`, `links`, `Q`, `full_count`, … | `CompanyName`, `UenNo`, `Links`, `Query`, `FullCount`, … (JSON names unchanged) | PascalCase. Deserialisation is untouched because every `NameInJSON` was kept |
 | Unused REST client `ApiproductionData.GetDatasets` and its structures | Removed | Dead code |
 | Screen `HomeModern` ("modern clone of Home"), data actions `GetData` / `GetDataForExport` | `Contractors`, `GetContractors`, `GetContractorsForExport` | Names describe what they are |
-| Theme `TestNew` | `GOV_UI` | No test or placeholder names in a deliverable |
+| Theme `TestNew` | `RegisteredContractors` | No test or placeholder names in a deliverable |
 | Module descriptions empty; one action description referred to a non-existent `Get_GovData` | Written | Self-documenting modules |
 
 **Bugs and risks fixed**
@@ -125,15 +126,15 @@ correctness and security. Everything below is applied and published.
    search and sort. The button says "Export to Excel" and explains this in a tooltip.
 3. **Searching with punctuation showed an error.** Upstream returns 409 for `-`, `#`, `.`,
    `&` and `'`, which appear in unit numbers like `#03-10` and company names like
-   `PTE. LTD.`. GOV_IS now sanitises the query; the contract tests pin this upstream
+   `PTE. LTD.`. DataGovSG_IS now sanitises the query; the contract tests pin this upstream
    behaviour.
 4. **Sorting did nothing.** The table had no `OnSort` handler and the headers had no sort
    attributes. Sorting is now server-side on every column, toggles direction, resets to
-   page 1, and is allow-listed in GOV_IS.
+   page 1, and is allow-listed in DataGovSG_IS.
 5. **Errors were silent.** The screen ignored `ErrorCode` and `ErrorMessage`, so an outage
    looked like "No record found." The empty state now shows the safe error message, or
    "No contractors match …" for a real empty search.
-6. **The dataset id was hard-coded in two UI data actions.** It's now a GOV_IS site
+6. **The dataset id was hard-coded in two UI data actions.** It's now a DataGovSG_IS site
    property, so the UI holds no integration configuration.
 7. **No way to raise rate limits.** An optional `x-api-key` header now comes from a
    **secret** site property. It's marked sensitive (masked in logs) and isn't sent when
@@ -208,7 +209,7 @@ version-specific Configuration Tool arguments to the platform version.
 
 | Level | What | How it runs |
 |---|---|---|
-| **Upstream contract** | The data.gov.sg dataset still matches what GOV_IS and the UI assume: field set (each `NameInJSON`), dataset size, value formats (expiry `dd/mm/yyyy`, 6-digit postal code, workhead, UEN), full-text search narrows results, an empty search is not an error, **server-side sort works on every allow-listed column**, an empty `sort=` is accepted, **5,000 rows in one call** (the export), deterministic paging, and **punctuation in `q` is rejected (409), which is why GOV_IS sanitises it** | [`tests/contract`](tests/contract) (pytest). Every PR and nightly; needs only internet access |
+| **Upstream contract** | The data.gov.sg dataset still matches what DataGovSG_IS and the UI assume: field set (each `NameInJSON`), dataset size, value formats (expiry `dd/mm/yyyy`, 6-digit postal code, workhead, UEN), full-text search narrows results, an empty search is not an error, **server-side sort works on every allow-listed column**, an empty `sort=` is accepted, **5,000 rows in one call** (the export), deterministic paging, and **punctuation in `q` is rejected (409), which is why DataGovSG_IS sanitises it** | [`tests/contract`](tests/contract) (pytest). Every PR and nightly; needs only internet access |
 | **End-to-end UI** | Public page loads without login and shows a large count and a full page; search narrows; punctuation searches work; no-match message; sort header changes the order; next page shows `21–40`; Export downloads a real `.xlsx` with the dated name | [`tests/e2e`](tests/e2e) (Playwright). Nightly against Dev, and as the gate in the deploy pipeline |
 | **IaC** | `fmt`, `validate`, `tflint`, `checkov`, plus `terraform test` with a **mocked AWS provider**. It asserts that prod is Multi-AZ, encrypted, private and deletion-protected; front-ends (not the controller) serve prod traffic; NAT per AZ; IMDSv2; TLS policy and redirect; WAF on; Express can't be Multi-AZ; bad inputs are rejected | [`infra/terraform/tests`](infra/terraform/tests). Every PR |
 
@@ -235,7 +236,7 @@ smoke test.
 ## 6. Security and compliance notes
 
 * The data is public, so the screen is anonymous and read-only. There is no write path.
-* Inputs are validated in GOV_IS. Sort is allow-listed, and the query is sanitised before it
+* Inputs are validated in DataGovSG_IS. Sort is allow-listed, and the query is sanitised before it
   reaches upstream.
 * Error messages are safe for users; exception details are logged on the server only.
 * The API key is a secret site property, set per environment in Service Center and masked
@@ -249,7 +250,7 @@ smoke test.
   or if upstream availability becomes a problem.
 * **Unit tests inside the platform.** The pure logic (sort allow-list, query sanitiser,
   input validation) is covered end to end through the UI and contract tests. A
-  `GOV_Tests` module in its own LifeTime application, exposing a self-test REST endpoint
+  `RegisteredContractors_Tests` module in its own LifeTime application, exposing a self-test REST endpoint
   that CI asserts, is the next step. It would never be deployed to Production.
 * **Export cap of 5,000 rows.** A broad export is truncated at 5,000; the tooltip says so. A
   full-register export would page through upstream in a server action, or be generated
