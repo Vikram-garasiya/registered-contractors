@@ -142,6 +142,11 @@ correctness and security. Everything below is applied and published.
    warning). It now uses the system font stack.
 9. **Export file name used the locale's default date format.** It's now ISO
    (`yyyy-MM-dd`), which is safe in file names and sorts correctly.
+10. **The screen could not load any data.** `ContractorRecord.ExpiryDate` was typed
+    Date, but upstream sends `dd/MM/yyyy` (`01/03/2028`) and the REST client only parses
+    ISO dates. Every page that contained an expiry date failed to deserialise, which
+    surfaced as "unexpected response". It is now Text (display and export only), and
+    the contract tests pin the `dd/mm/yyyy` format.
 
 ## 4. Infrastructure as Code (AWS)
 
